@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Payment Processing API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        input, button {
+            padding: 10px;
+            margin: 5px 0;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        button {
+            background: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .payment-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+    </style>
+</head>
+<body>
+    <h1>Payment Processing System</h1>
+    
+    <div class="card">
+        <h2>Create Payment</h2>
+        <input type="text" id="idempotency_key" placeholder="Idempotency Key">
+        <input type="number" id="amount" placeholder="Amount" step="0.01">
+        <input type="text" id="description" placeholder="Description (optional)">
+        <button onclick="createPayment()">Create Payment</button>
+        <div id="status"></div>
+    </div>
+    
+    <div class="card">
+        <h2>Recent Payments</h2>
+        <div id="payments"></div>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin;
+        
+        async function createPayment() {
+            const data = {
+                idempotency_key: document.getElementById('idempotency_key').value,
+                amount: document.getElementById('amount').value,
+                description: document.getElementById('description').value
+            };
+            
+            const response = await fetch(`${API_URL}/api/payments/`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            document.getElementById('status').innerHTML = 
+                `<p style="color: green">Payment created: $${result.amount}</p>`;
+            loadPayments();
+        }
+        
+        async function loadPayments() {
+            const response = await fetch(`${API_URL}/api/payments/`);
+            const data = await response.json();
+            
+            document.getElementById('payments').innerHTML = data.results.map(p => `
+                <div class="payment-item">
+                    <strong>${p.idempotency_key}</strong> - $${p.amount} 
+                    <span style="color: ${p.status === 'COMPLETED' ? 'green' : 'red'}">
+                        ${p.status}
+                    </span>
+                    ${p.status === 'COMPLETED' ? 
+                        `<button onclick="refund('${p.id}')">Refund</button>` : ''}
+                </div>
+            `).join('');
+        }
+        
+        async function refund(paymentId) {
+            const amount = prompt('Refund amount:');
+            const reason = prompt('Reason:');
+            
+            await fetch(`${API_URL}/api/payments/${paymentId}/refund/`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({amount, reason})
+            });
+            
+            loadPayments();
+        }
+        
+        loadPayments();
+    </script>
+</body>
+</html>

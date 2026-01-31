@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: payment_db
+    environment:
+      POSTGRES_USER: paymentuser
+      POSTGRES_PASSWORD: payment123
+      POSTGRES_DB: payment_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - payment_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  payment_postgres_data:
